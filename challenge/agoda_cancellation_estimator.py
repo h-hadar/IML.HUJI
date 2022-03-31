@@ -1,8 +1,14 @@
 from __future__ import annotations
 from typing import NoReturn
+
+import sklearn
+
 from IMLearn.base import BaseEstimator
 import numpy as np
 from sklearn import svm
+from sklearn.neighbors import KNeighborsClassifier
+
+N_NEIGHBORS = 10
 
 
 class AgodaCancellationEstimator(BaseEstimator):
@@ -42,10 +48,8 @@ class AgodaCancellationEstimator(BaseEstimator):
         -----
 
         """
-        clf = svm.SVC()
-        clf.fit(X, y)
-        self._clf = clf
-        # self._coef = clf.coef_
+        self.classifier = KNeighborsClassifier(n_neighbors=N_NEIGHBORS)
+        self.classifier.fit(X, y)
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -61,7 +65,8 @@ class AgodaCancellationEstimator(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-        return self._clf.predict(X)
+        return self.classifier.predict(X)
+        # return self._clf.predict(X)
         # return np.sign(X @ self._coef)
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
@@ -85,4 +90,4 @@ class AgodaCancellationEstimator(BaseEstimator):
         n_samples = y.shape[0]
         # loss is the amount of wrong classifications
         # compare = y_pred * y
-        return np.count(y != y_pred) / n_samples * 100
+        return np.sum(y != y_pred) / n_samples * 100
