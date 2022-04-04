@@ -60,10 +60,9 @@ def load_data(filename: str):
         features = pd.concat((features, pd.get_dummies(features[field])), axis=1)
         del features[field]
         
+    features.reset_index(drop=True, inplace=True)
     labels_vec = features['price']
     del features['price']
-    features.reset_index(drop=True, inplace=True)
-    labels_vec.reset_index(drop=True, inplace=True)
     return features, labels_vec
 
 
@@ -115,7 +114,7 @@ if __name__ == '__main__':
     features, labels = load_data('../datasets/house_prices.csv')
 
     # Question 2 - Feature evaluation with respect to response
-    feature_evaluation(features, labels, output_path=".\ex2\q2_plots")
+    #feature_evaluation(features, labels, output_path=".\ex2\q2_plots")
 
     # Question 3 - Split samples into training- and testing sets.
     train_x, train_y, test_x, test_y = split_train_test(features, labels, train_proportion=0.75)
