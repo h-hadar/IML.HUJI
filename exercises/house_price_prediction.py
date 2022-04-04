@@ -1,4 +1,7 @@
 import copy
+import random
+
+import plotly.offline
 
 from IMLearn.utils import split_train_test
 from IMLearn.learners.regressors import LinearRegression
@@ -53,12 +56,15 @@ def load_data(filename: str):
     
     categorical_fields = ["zipcode"]
     for field in categorical_fields:
+        features[field] = features[field].astype(str)
         features = pd.concat((features, pd.get_dummies(features[field])), axis=1)
         del features[field]
         
-    labels = full_data['price']
+    labels_vec = features['price']
     del features['price']
-    return features, labels
+    features.reset_index(drop=True, inplace=True)
+    labels_vec.reset_index(drop=True, inplace=True)
+    return features, labels_vec
 
 
 def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") -> NoReturn:
@@ -78,19 +84,41 @@ def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") ->
     output_path: str (default ".")
         Path to folder in which plots are saved
     """
-    raise NotImplementedError()
+    sigma_y = np.std(y)
+    sigma_x = np.std(X, axis=0)  # the std for each feature
+    for feature_name in X:
+        try:
+            cov = np.cov(X[feature_name], y)[0, 1]
+            pearson_corr = cov / (sigma_x[feature_name] * sigma_y)
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=X[feature_name], y=y,
+                                     name='Scatter of feature against response',
+                                     mode='markers'))
+            fig.update_layout(title=f'Scatter of response against {feature_name}, Pearson Correlation: {pearson_corr}',
+                              xaxis_title=feature_name,
+                              yaxis_title='Response (House price)')
+            fig.update_traces(marker=dict(size=7,
+                                          line=dict(width=1,
+                                                    color='white'),
+                                          color='slateblue'),
+                              selector=dict(mode='markers'))
+            plotly.offline.plot(fig, filename=output_path + f"\\{feature_name}.html", auto_open=False)
+        except TypeError:
+            print(f"problem with column {feature_name}")
+        
+
 
 
 if __name__ == '__main__':
     np.random.seed(0)
     # Question 1 - Load and preprocessing of housing prices dataset
-    df, label = load_data('../datasets/house_prices.csv')
+    features, labels = load_data('../datasets/house_prices.csv')
 
     # Question 2 - Feature evaluation with respect to response
-    raise NotImplementedError()
+    feature_evaluation(features, labels, output_path=".\ex2\q2_plots")
 
     # Question 3 - Split samples into training- and testing sets.
-    raise NotImplementedError()
+    train_x, train_y, test_x, test_y = split_train_test(features, labels, train_proportion=0.75)
 
     # Question 4 - Fit model over increasing percentages of the overall training data
     # For every percentage p in 10%, 11%, ..., 100%, repeat the following 10 times:
@@ -99,4 +127,61 @@ if __name__ == '__main__':
     #   3) Test fitted model over test set
     #   4) Store average and variance of loss over test set
     # Then plot average loss as function of training size with error ribbon of size (mean-2*std, mean+2*std)
-    raise NotImplementedError()
+    train_sizes = np.array(range(10, 100)) / 100
+
+    def test_performance(percent):
+        losses = []
+        for i in range(10):
+            sub_data = train_x.sample(frac=percent)
+            sub_labels = train_y.iloc[sub_data.index]
+            model = LinearRegression()
+            model.fit(sub_data, sub_labels)
+            loss = model.loss(test_x, test_y)
+            losses.append(loss)
+        return np.mean(losses), np.std(losses)
+    
+    results = [test_performance(size) for size in train_sizes]
+    y = [r[0] for r in results]
+    y_upper = [r[0] + 2 * r[1] for r in results]
+    y_lower = [r[0] - 2 * r[1] for r in results]
+    x = train_sizes*100
+
+    fig = go.Figure([
+        go.Scatter(
+            name='Mean-Loss across 10 training sets',
+            x=x,
+            y=y,
+            mode='lines',
+            line=dict(color='rgb(31, 119, 180)'),
+        ),
+        go.Scatter(
+            name='Upper Bound',
+            x=x,
+            y=y_upper,
+            mode='lines',
+            marker=dict(color="#444"),
+            line=dict(width=0),
+            showlegend=False
+        ),
+        go.Scatter(
+            name='Lower Bound',
+            x=x,
+            y=y_lower,
+            marker=dict(color="#444"),
+            line=dict(width=0),
+            mode='lines',
+            fillcolor='rgba(68, 68, 68, 0.3)',
+            fill='tonexty',
+            showlegend=False
+        )
+    ])
+    fig.update_layout(
+        xaxis_title='Training set size (% of total training set)',
+        yaxis_title='Mean LOSS on test set',
+        title='Mean LOSS on test data with varying size of training set',
+        hovermode="x"
+    )
+    fig.show()
+    plotly.offline.plot(fig, filename=".\ex2\linear_regressin.html", auto_open=False)
+        
+        

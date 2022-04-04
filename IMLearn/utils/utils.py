@@ -3,8 +3,7 @@ import numpy as np
 import pandas as pd
 
 
-def split_train_test(X: pd.DataFrame, y: pd.Series, train_proportion: float = .25) \
-        -> Tuple[pd.DataFrame, pd.Series, pd.DataFrame, pd.Series]:
+def split_train_test(X: pd.DataFrame, y: pd.Series, train_proportion) -> Tuple[pd.DataFrame, pd.Series, pd.DataFrame, pd.Series]:
     """
     Split given sample to a training- and testing sample
 
@@ -31,9 +30,15 @@ def split_train_test(X: pd.DataFrame, y: pd.Series, train_proportion: float = .2
 
     test_y : Series of shape (floor((1-train_proportion) * n_samples), )
         Responses of test samples
-
     """
-    raise NotImplementedError()
+    n_samples = X.shape[0]
+    separating_i = int(n_samples * train_proportion)
+    train_x = X.iloc[:separating_i, :]
+    train_y = y.iloc[:separating_i]
+    test_x = X.iloc[separating_i+1:, :]
+    test_y = y.iloc[separating_i+1:]
+    return train_x, train_y, test_x, test_y
+
 
 
 def confusion_matrix(a: np.ndarray, b: np.ndarray) -> np.ndarray:
