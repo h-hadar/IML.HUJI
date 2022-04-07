@@ -29,15 +29,15 @@ def load_data(filename: str):
     DataFrame or a Tuple[DataFrame, Series]
     """
  
-    full_data = pd.read_csv(filename).dropna()
+    full_data = pd.read_csv(filename).dropna().drop_duplicates()
     features = copy.copy(full_data)
-    n_samples = full_data.shape[0]
     del features["id"]
     
     # drop rows that contain invalid data:
     features.drop(features.loc[features['price'] <= 0].index, inplace=True)
 
     features['date'] = pd.to_datetime(features["date"], infer_datetime_format=True).apply(lambda x: x.value)
+    features['floor'] = features['floors'].astype(int)
     
     # handle year_renovated, so it doesn't contain zeros, and add is_renovated binary column
     features['is_renovated'] = np.where(features["yr_renovated"] == 0, 0, 1)
@@ -57,7 +57,7 @@ def load_data(filename: str):
     categorical_fields = ["zipcode"]
     for field in categorical_fields:
         features[field] = features[field].astype(str)
-        features = pd.concat((features, pd.get_dummies(features[field])), axis=1)
+        features = pd.concat((features, pd.get_dummies(features[field], drop_first=True)), axis=1)
         del features[field]
         
     features.reset_index(drop=True, inplace=True)

@@ -62,9 +62,9 @@ def load_data(filename: str, isTest: bool):
                        "guest_is_not_the_customer", "no_of_adults", "no_of_children", "no_of_extra_bed", "no_of_room"]
     features = full_data[good_fields]
     _add_new_cols(features, full_data)  # adding columns for the length of the stay, is weekend, day of week
-    features = _add_categories(features, full_data,
-                               ['accommadation_type_name', 'customer_nationality', 'hotel_country_code',
-                                'charge_option', 'original_payment_type', 'original_payment_currency'])
+    # features = _add_categories(features, full_data,
+    #                            ['accommadation_type_name', 'customer_nationality', 'hotel_country_code',
+    #                             'charge_option', 'original_payment_type', 'original_payment_currency'])
     features_true_false = ["is_first_booking", "is_user_logged_in"]
     for f in features_true_false:
         features[f] = np.where(features[f] == True, 1, 0)

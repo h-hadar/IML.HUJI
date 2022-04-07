@@ -51,11 +51,11 @@ class LinearRegression(BaseEstimator):
         -----
         Fits model with or without an intercept depending on value of `self.include_intercept_`
         """
-        X = self._expand_matrix(X)
+        X = self.__expand_matrix(X)
         x_dagger = pinv(X)
         self.coefs_ = x_dagger @ y
 
-    def _expand_matrix(self, X):
+    def __expand_matrix(self, X):
         if self.include_intercept_:
             ones_vector = np.ones(X.shape[0]).reshape(-1, 1)
             X = np.concatenate((ones_vector, X), axis=1)
@@ -75,7 +75,7 @@ class LinearRegression(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-        X = self._expand_matrix(X)
+        X = self.__expand_matrix(X)
         return X @ self.coefs_
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:

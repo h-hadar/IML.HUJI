@@ -8,7 +8,7 @@ import numpy as np
 from sklearn import svm
 from sklearn.neighbors import KNeighborsClassifier
 
-N_NEIGHBORS = 20
+N_NEIGHBORS = 30
 
 
 class AgodaCancellationEstimator(BaseEstimator):
@@ -50,10 +50,10 @@ class AgodaCancellationEstimator(BaseEstimator):
 
         """
         self.classifier = KNeighborsClassifier(n_neighbors=N_NEIGHBORS)
-        # self.classifier = KNeighborsClassifier(n_neighbors=N_NEIGHBORS)
         self.regressor = LinearRegression()
         boolean_cancel = np.where(y < 0, 0, 1)
-        self.classifier.fit(X, boolean_cancel)
+        normalized_data = sklearn.preprocessing.normalize(X, axis=0)
+        self.classifier.fit(normalized_data, boolean_cancel)
         sub_X = X[y > 0]
         sub_y = y[y > 0]
         self.regressor.fit(sub_X, sub_y)
@@ -73,7 +73,8 @@ class AgodaCancellationEstimator(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-        cancelling_prediction = self.classifier.predict(X)
+        normalize_x = sklearn.preprocessing.normalize(X, axis=0)
+        cancelling_prediction = self.classifier.predict(normalize_x)
         sub_X = X[cancelling_prediction == 1]
         pred_dates = self.regressor.predict(sub_X)
         i = 0
