@@ -34,14 +34,20 @@ def load_data(filename: str):
     del features["id"]
     
     # drop rows that contain invalid data:
-    features.drop(features.loc[features['price'] <= 0].index, inplace=True)
+    features.drop(features.loc[features['price'] <= 1000].index, inplace=True)
+    features.drop(features.loc[features['bedrooms'] <= 0].index, inplace=True)
+    features.drop(features.loc[features['floors'] < 1].index, inplace=True)
 
-    features['date'] = pd.to_datetime(features["date"], infer_datetime_format=True).apply(lambda x: x.value)
     features['floor'] = features['floors'].astype(int)
     
     # handle year_renovated, so it doesn't contain zeros, and add is_renovated binary column
-    features['is_renovated'] = np.where(features["yr_renovated"] == 0, 0, 1)
+    features['is_renovated'] = np.where(features["yr_renovated"] == 0, -1, 1)
     features["yr_renovated"] = np.where(features["yr_renovated"] != 0, features["yr_renovated"], features["yr_built"])
+    year_sold = pd.to_datetime(features["date"], infer_datetime_format=True).dt.year
+    features['age_when_sold'] = year_sold - features['yr_built']
+    features['time_from_last_renovation'] = features['yr_renovated'] - features['yr_built']
+    # features['date'] = pd.to_datetime(features["date"], infer_datetime_format=True).apply(lambda x: x.value)
+    del features['date']
     
     # handle the basement zeros problem (they might skew the linear analysis of basement size)
     features["no_basement"] = np.where(features["sqft_basement"] == 0, 1, 0)
@@ -114,7 +120,7 @@ if __name__ == '__main__':
     features, labels = load_data('../datasets/house_prices.csv')
 
     # Question 2 - Feature evaluation with respect to response
-    #feature_evaluation(features, labels, output_path=".\ex2\q2_plots")
+    feature_evaluation(features, labels, output_path=".\ex2\q2_plots")
 
     # Question 3 - Split samples into training- and testing sets.
     train_x, train_y, test_x, test_y = split_train_test(features, labels, train_proportion=0.75)
@@ -126,7 +132,7 @@ if __name__ == '__main__':
     #   3) Test fitted model over test set
     #   4) Store average and variance of loss over test set
     # Then plot average loss as function of training size with error ribbon of size (mean-2*std, mean+2*std)
-    train_sizes = np.array(range(10, 100)) / 100
+    train_sizes = np.array(range(10, 101)) / 100
 
     def test_performance(percent):
         losses = []
@@ -154,7 +160,7 @@ if __name__ == '__main__':
             line=dict(color='rgb(31, 119, 180)'),
         ),
         go.Scatter(
-            name='Upper Bound',
+            name='mean + 2*std',
             x=x,
             y=y_upper,
             mode='lines',
@@ -163,7 +169,7 @@ if __name__ == '__main__':
             showlegend=False
         ),
         go.Scatter(
-            name='Lower Bound',
+            name='mean - 2*std',
             x=x,
             y=y_lower,
             marker=dict(color="#444"),

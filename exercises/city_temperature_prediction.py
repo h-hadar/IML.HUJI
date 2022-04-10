@@ -50,14 +50,14 @@ if __name__ == '__main__':
 		yaxis_title='Temperature',
 		title='Temperature as a function of day of year, color coded by year'
 	)
-	# fig.show()
+	fig.show()
 	std_by_month = israel_df.groupby('Month').Temp.agg(np.std)
 	fig = px.bar(std_by_month)
 	fig.update_layout(
 		yaxis_title='Std of temperature',
 		title='Standard deviation of temperature in each month'
 	)
-	# fig.show()
+	fig.show()
 	
 	# # Question 3 - Exploring differences between countries
 	
@@ -68,7 +68,7 @@ if __name__ == '__main__':
 		yaxis_title='Mean Temperature',
 		title='Mean Temperature across months in different countries'
 	)
-	# fig.show()
+	fig.show()
 	israel_df['Year'] = israel_df['Year'].astype(int)
 	
 	#
@@ -88,7 +88,7 @@ if __name__ == '__main__':
 		yaxis_title='MSE',
 		title='Mean Loss with Different Polynomial Degree of Fitting'
 	)
-	# fig.show()
+	fig.show()
 	#
 	# # Question 5 - Evaluating fitted model on different countries
 	chosen_degree = np.argmin(losses) + 1
