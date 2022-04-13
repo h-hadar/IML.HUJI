@@ -1,3 +1,5 @@
+import math
+
 from IMLearn import BaseEstimator
 from challenge.agoda_cancellation_estimator import AgodaCancellationEstimator
 # from IMLearn.utils import split_train_test
@@ -62,20 +64,21 @@ def load_data(filename: str, isTest: bool):
                        "guest_is_not_the_customer", "no_of_adults", "no_of_children", "no_of_extra_bed", "no_of_room"]
     features = full_data[good_fields]
     _add_new_cols(features, full_data)  # adding columns for the length of the stay, is weekend, day of week
-    # features = _add_categories(features, full_data,
-    #                            ['accommadation_type_name', 'customer_nationality', 'hotel_country_code',
-    #                             'charge_option', 'original_payment_type', 'original_payment_currency'])
-    features_true_false = ["is_first_booking", "is_user_logged_in"]
-    for f in features_true_false:
+    features = _add_categories(features, full_data,
+                               ['accommadation_type_name', 'customer_nationality', 'hotel_country_code',
+                                'charge_option', 'original_payment_type', 'original_payment_currency'])
+    boolean_features = ["is_first_booking", "is_user_logged_in"]
+    for f in boolean_features:
         features[f] = np.where(features[f] == True, 1, 0)
     # features["cancellation_datetime"].replace(np.nan, "", inplace=True)
     _to_date_number(features, ["hotel_live_date"])
     features = features.loc[:, ~features.columns.duplicated()]
     features.reset_index(inplace=True, drop=True)
     if not isTest:
-        labels = pd.to_numeric(pd.to_datetime(full_data["cancellation_datetime"]))
-        labels.reset_index(inplace=True, drop=True)
-        return features, labels
+        cancel_diff = pd.to_datetime(full_data['cancellation_datetime']) - pd.to_datetime(full_data['booking_datetime'])
+        y_values = pd.to_numeric(pd.to_datetime(full_data["cancellation_datetime"]))
+        y_values.reset_index(inplace=True, drop=True)
+        return features, y_values
     return features
 
 
@@ -128,8 +131,6 @@ if __name__ == '__main__':
     estimator = AgodaCancellationEstimator().fit(train_X, train_y)
     test_set = load_data("test_set_week_1.csv", isTest=True)
     test_set = expand_to_train_data(test_set, training_features)
-    # predictions = estimator.predict(test_set)
-    # prediction_dates = pd.to_datetime(predictions)
     
     # Store model predictions over test set
     # evaluate_and_export(estimator, test_set, "206996761_212059679_211689765.csv")

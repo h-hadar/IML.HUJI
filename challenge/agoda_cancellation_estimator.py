@@ -31,7 +31,7 @@ class AgodaCancellationEstimator(BaseEstimator):
         super().__init__()
         self._coef = None
         self.classifier = None
-        self.regressor = None
+        self.regressor = LinearRegression()
 
     def _fit(self, X: np.ndarray, y: np.ndarray) -> NoReturn:
         """
@@ -49,8 +49,6 @@ class AgodaCancellationEstimator(BaseEstimator):
         -----
 
         """
-        self.classifier = KNeighborsClassifier(n_neighbors=N_NEIGHBORS)
-        self.regressor = LinearRegression()
         boolean_cancel = np.where(y < 0, 0, 1)
         normalized_data = sklearn.preprocessing.normalize(X, axis=0)
         self.classifier.fit(normalized_data, boolean_cancel)
