@@ -1,8 +1,12 @@
-import math
 from typing import NoReturn
-from ...base import BaseEstimator
+
 import numpy as np
-from numpy.linalg import det, inv
+from numpy.linalg import det
+
+from ..gaussian_estimators import MultivariateGaussian
+from .gaussian_naive_bayes import GaussianNaiveBayes
+from ...base import BaseEstimator
+from ...metrics import loss_functions
 
 
 class LDA(BaseEstimator):
@@ -49,17 +53,17 @@ class LDA(BaseEstimator):
 			Responses of input data to fit to
 		"""
 		self.classes_, class_sample_count = np.unique(y, return_counts=True)
-		total_sample_count = X.shape[0]
-		self.pi_ = class_sample_count / total_sample_count
+		m = X.shape[0]
+		self.pi_ = class_sample_count / m
 		self.mu_ = [np.sum(X[y == k, :], axis=0) / class_sample_count[i] for i, k in enumerate(self.classes_)]
 		n_features = X.shape[1]
 		self.cov_ = np.zeros((n_features, n_features))
 		for i, k in enumerate(self.classes_):
-			mu_k = self.mu_[i, :]
+			mu_k = self.mu_[i]
 			for x_j in X[y == k, :]:
 				dist = (x_j - mu_k).reshape(-1, 1)
 				self.cov_ += dist @ dist.T
-		self.cov_ /= total_sample_count
+		self.cov_ /= (m - len(self.classes_))
 		self._cov_inv = np.linalg.inv(self.cov_)
 	
 	def _predict(self, X: np.ndarray) -> np.ndarray:
@@ -88,12 +92,12 @@ class LDA(BaseEstimator):
 	
 	# calculate sigma-1 * mu_k
 	def __a_coeff(self, class_index: int):
-		return self._cov_inv @ (self.mu_[class_index, :].reshape(-1, 1))
+		return self._cov_inv @ (self.mu_[class_index].reshape(-1, 1))
 	
 	# calculate log(pi_k) - 0.5 * mu_k * sigma-1 * mu_k
 	def __b_coeff(self, class_index: int):
-		mu_k = self.mu_[class_index, :].reshape(-1, 1)
-		return np.log(self.pi_(class_index) - .5 * mu_k.T @ self._cov_inv @ mu_k)
+		mu_k = self.mu_[class_index].reshape(-1, 1)
+		return np.log(self.pi_[class_index]) - 0.5 * mu_k.T @ self._cov_inv @ mu_k
 	
 	def likelihood(self, X: np.ndarray) -> np.ndarray:
 		"""
@@ -112,8 +116,15 @@ class LDA(BaseEstimator):
 		"""
 		if not self.fitted_:
 			raise ValueError("Estimator must first be fitted before calling `likelihood` function")
+		n_classes = self.classes_.shape[0]
 		
-		raise NotImplementedError()
+		n_classes = self.classes_.shape[0]
+		pdfs_mat = np.array([])
+		for k in range(n_classes):
+			mu_k = self.mu_[k]
+			likelihood_for_class_k = GaussianNaiveBayes.likelihood_helper(mu_k, self.cov_, X)
+			pdfs_mat = likelihood_for_class_k if not pdfs_mat.size else np.c_[pdfs_mat, likelihood_for_class_k]
+		return pdfs_mat
 	
 	def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
 		"""
@@ -130,6 +141,6 @@ class LDA(BaseEstimator):
 		Returns
 		-------
 		loss : float
-			Performance under missclassification loss function
+			Performance under misclassification loss function
 		"""
-		raise NotImplementedError()
+		return loss_functions.misclassification_error(y_true=y, y_pred=self.predict(X))

@@ -216,8 +216,8 @@ class MultivariateGaussian:
         """
         
         # in this function i calculate the log-likelihood according to the derivation in q9 of the theoretical part
-        n = np.size(X, axis=0)
-        d = np.size(X, axis=1)
+        n = X.shape[0]
+        d = X.shape[1]
 
         norm_fact = 1 / np.sqrt(np.power((np.pi * 2), d) * np.linalg.det(cov))
         first_part = n * np.log(norm_fact)

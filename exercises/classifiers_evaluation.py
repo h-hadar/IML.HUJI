@@ -1,10 +1,13 @@
-from IMLearn.learners.classifiers import Perceptron, LDA, GaussianNaiveBayes
-import numpy as np
 from typing import Tuple
+
+import numpy as np
+import plotly.express as px
 import plotly.graph_objects as go
 import plotly.io as pio
-import plotly.express as px
 from plotly.subplots import make_subplots
+
+from IMLearn.learners.classifiers import Perceptron, LDA, GaussianNaiveBayes
+from IMLearn.metrics.loss_functions import accuracy
 
 pio.templates.default = "simple_white"
 
@@ -64,20 +67,47 @@ def compare_gaussian_classifiers():
 	"""
 	Fit both Gaussian Naive Bayes and LDA classifiers on both gaussians1 and gaussians2 datasets
 	"""
-	for f in ["gaussian1.npy", "gaussian2.npy"]:
+	for filename in ["gaussian1.npy", "gaussian2.npy"]:
 		# Load dataset
-		raise NotImplementedError()
+		features_mat, true_classes = load_dataset(f"../datasets/{filename}")
 		
 		# Fit models and predict over training set
-		raise NotImplementedError()
+		linear_analysis = LDA()
+		linear_analysis.fit(features_mat, true_classes)
+		lda_predictions = linear_analysis.predict(features_mat)
+		lda_accuracy = accuracy(true_classes, lda_predictions)
 		
-		# Plot a figure with two suplots, showing the Gaussian Naive Bayes predictions on the left and LDA predictions
+		naive_bayes = GaussianNaiveBayes()
+		naive_bayes.fit(features_mat, true_classes)
+		bayes_predictions = naive_bayes.predict(features_mat)
+		bayes_accuracy = accuracy(true_classes, bayes_predictions)
+		
+		# Plot a figure with two subplots, showing the Gaussian Naive Bayes predictions on the left and LDA predictions
 		# on the right. Plot title should specify dataset used and subplot titles should specify algorithm and accuracy
-		from IMLearn.metrics import accuracy
-		raise NotImplementedError()
+		fig = make_subplots(rows=1, cols=2,
+							subplot_titles=("LDA Classifier, accuracy: {:.3f}".format(lda_accuracy),
+											"Naive Bayes Classifier, accuracy: {:.3f}".format(bayes_accuracy)))
+		fig.add_trace(
+			go.Scatter(x=features_mat[:, 0],
+					   y=features_mat[:, 1],
+					   mode='markers',
+					   marker=dict(color=lda_predictions, symbol=true_classes)),
+			row=1, col=1
+		)
+		fig.add_trace(
+			go.Scatter(x=features_mat[:, 0],
+					   y=features_mat[:, 1],
+					   mode='markers',
+					   marker=dict(color=bayes_predictions, symbol=true_classes)),
+			row=1, col=2
+		)
+		fig.update_layout(
+			title=f'Classification Performance Comparison on Dataset {filename}'
+		)
+		fig.show()
 
 
 if __name__ == '__main__':
 	np.random.seed(0)
 	run_perceptron()
-	#compare_gaussian_classifiers()
+	compare_gaussian_classifiers()
