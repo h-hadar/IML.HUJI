@@ -3,6 +3,7 @@ from typing import Tuple
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
+from math import atan2, pi
 from plotly.subplots import make_subplots
 import plotly.io as pio
 
@@ -64,28 +65,28 @@ def run_perceptron():
 
 
 def get_ellipse(mu: np.ndarray, cov: np.ndarray):
-    """
-    Draw an ellipse centered at given location and according to specified covariance matrix
-
-    Parameters
-    ----------
-    mu : ndarray of shape (2,)
-        Center of ellipse
-
-    cov: ndarray of shape (2,2)
-        Covariance of Gaussian
-
-    Returns
-    -------
-        scatter: A plotly trace object of the ellipse
-    """
-    l1, l2 = tuple(np.linalg.eigvalsh(cov)[::-1])
-    theta = atan2(l1 - cov[0, 0], cov[0, 1]) if cov[0, 1] != 0 else (np.pi / 2 if cov[0, 0] < cov[1, 1] else 0)
-    t = np.linspace(0, 2 * pi, 100)
-    xs = (l1 * np.cos(theta) * np.cos(t)) - (l2 * np.sin(theta) * np.sin(t))
-    ys = (l1 * np.sin(theta) * np.cos(t)) + (l2 * np.cos(theta) * np.sin(t))
-
-    return go.Scatter(x=mu[0] + xs, y=mu[1] + ys, mode="lines", marker_color="black")
+	"""
+	Draw an ellipse centered at given location and according to specified covariance matrix
+	
+	Parameters
+	----------
+	mu : ndarray of shape (2,)
+		Center of ellipse
+	
+	cov: ndarray of shape (2,2)
+		Covariance of Gaussian
+	
+	Returns
+	-------
+		scatter: A plotly trace object of the ellipse
+	"""
+	l1, l2 = tuple(np.linalg.eigvalsh(cov)[::-1])
+	theta = atan2(l1 - cov[0, 0], cov[0, 1]) if cov[0, 1] != 0 else (np.pi / 2 if cov[0, 0] < cov[1, 1] else 0)
+	t = np.linspace(0, 2 * pi, 100)
+	xs = (l1 * np.cos(theta) * np.cos(t)) - (l2 * np.sin(theta) * np.sin(t))
+	ys = (l1 * np.sin(theta) * np.cos(t)) + (l2 * np.cos(theta) * np.sin(t))
+	
+	return go.Scatter(x=mu[0] + xs, y=mu[1] + ys, mode="lines", line=dict(color='black', width=.8), showlegend=False)
 
 
 def compare_gaussian_classifiers():
@@ -140,6 +141,19 @@ def compare_gaussian_classifiers():
 					   showlegend=False)],
 			rows=1, cols=2
 		)
+		# add ellipses to the LDA subplot
+		for i, cls in enumerate(LDA_classifier.classes_):
+			mu = lda_centers[i, :]
+			fig.add_trace(get_ellipse(mu, LDA_classifier.cov_),
+						  row=1, col=1)
+		
+		# add ellipses to the bayes subplot
+		for i, cls in enumerate(naive_bayes_classifier.classes_):
+			mu = bayes_centers[i, :]
+			cov = np.diag(naive_bayes_classifier.vars_[i])
+			fig.add_trace(get_ellipse(mu, cov),
+						  row=1, col=2)
+		
 		fig.update_layout(
 			title=f'Classification Performance Comparison on Dataset {filename}'
 		)
@@ -148,5 +162,5 @@ def compare_gaussian_classifiers():
 
 if __name__ == '__main__':
 	np.random.seed(0)
-	# run_perceptron()
+	run_perceptron()
 	compare_gaussian_classifiers()
