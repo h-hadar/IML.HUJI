@@ -4,6 +4,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import plotly.io as pio
 
 from IMLearn.learners.classifiers import Perceptron, LDA, GaussianNaiveBayes
 from IMLearn.metrics.loss_functions import accuracy
@@ -143,15 +144,6 @@ def compare_gaussian_classifiers():
 			title=f'Classification Performance Comparison on Dataset {filename}'
 		)
 		fig.show()
-
-        # Add traces for data-points setting symbols and colors
-        raise NotImplementedError()
-
-        # Add `X` dots specifying fitted Gaussians' means
-        raise NotImplementedError()
-
-        # Add ellipses depicting the covariances of the fitted Gaussians
-        raise NotImplementedError()
 
 
 if __name__ == '__main__':
