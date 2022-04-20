@@ -72,34 +72,48 @@ def compare_gaussian_classifiers():
 		features_mat, true_classes = load_dataset(f"../datasets/{filename}")
 		
 		# Fit models and predict over training set
-		linear_analysis = LDA()
-		linear_analysis.fit(features_mat, true_classes)
-		lda_predictions = linear_analysis.predict(features_mat)
+		LDA_classifier = LDA()
+		LDA_classifier.fit(features_mat, true_classes)
+		lda_predictions = LDA_classifier.predict(features_mat)
 		lda_accuracy = accuracy(true_classes, lda_predictions)
 		
-		naive_bayes = GaussianNaiveBayes()
-		naive_bayes.fit(features_mat, true_classes)
-		bayes_predictions = naive_bayes.predict(features_mat)
+		naive_bayes_classifier = GaussianNaiveBayes()
+		naive_bayes_classifier.fit(features_mat, true_classes)
+		bayes_predictions = naive_bayes_classifier.predict(features_mat)
 		bayes_accuracy = accuracy(true_classes, bayes_predictions)
 		
 		# Plot a figure with two subplots, showing the Gaussian Naive Bayes predictions on the left and LDA predictions
 		# on the right. Plot title should specify dataset used and subplot titles should specify algorithm and accuracy
+		symbols = np.array(["circle", "star", "triangle-up"])
+		center_symbol = "x"
 		fig = make_subplots(rows=1, cols=2,
 							subplot_titles=("LDA Classifier, accuracy: {:.3f}".format(lda_accuracy),
 											"Naive Bayes Classifier, accuracy: {:.3f}".format(bayes_accuracy)))
-		fig.add_trace(
-			go.Scatter(x=features_mat[:, 0],
+		lda_centers = np.array(LDA_classifier.mu_)
+		fig.add_traces(
+			[go.Scatter(x=features_mat[:, 0],
 					   y=features_mat[:, 1],
+					   mode='markers', showlegend=False,
+					   marker=dict(size=10, color=lda_predictions, symbol=symbols[true_classes.astype(int)],
+								   line=dict(color="gray", width=.5))),
+			go.Scatter(x=lda_centers[:, 0], y=lda_centers[:, 1],
+					   marker=dict(size=10, color='black', symbol=center_symbol, line=dict(color='white', width=1)),
 					   mode='markers',
-					   marker=dict(color=lda_predictions, symbol=true_classes)),
-			row=1, col=1
+					   showlegend=False)],
+			rows=1, cols=1
 		)
-		fig.add_trace(
-			go.Scatter(x=features_mat[:, 0],
+		bayes_centers = np.array(naive_bayes_classifier.mu_)
+		fig.add_traces(
+			[go.Scatter(x=features_mat[:, 0],
 					   y=features_mat[:, 1],
+					   mode='markers', showlegend=False,
+					   marker=dict(size=9, color=bayes_predictions, symbol=symbols[true_classes.astype(int)],
+								   line=dict(color="gray", width=.5))),
+			go.Scatter(x=bayes_centers[:, 0], y=bayes_centers[:, 1],
+					   marker=dict(size=10, color='black', symbol=center_symbol, line=dict(color='white', width=1)),
 					   mode='markers',
-					   marker=dict(color=bayes_predictions, symbol=true_classes)),
-			row=1, col=2
+					   showlegend=False)],
+			rows=1, cols=2
 		)
 		fig.update_layout(
 			title=f'Classification Performance Comparison on Dataset {filename}'
@@ -109,5 +123,5 @@ def compare_gaussian_classifiers():
 
 if __name__ == '__main__':
 	np.random.seed(0)
-	run_perceptron()
+	# run_perceptron()
 	compare_gaussian_classifiers()
