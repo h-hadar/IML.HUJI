@@ -54,6 +54,8 @@ class LDA(BaseEstimator):
 		"""
 		self.classes_, class_sample_count = np.unique(y, return_counts=True)
 		m = X.shape[0]
+		if len(X.shape) == 1:
+			X = X.reshape(-1, 1)
 		self.pi_ = class_sample_count / m
 		self.mu_ = [np.sum(X[y == k, :], axis=0) / class_sample_count[i] for i, k in enumerate(self.classes_)]
 		n_features = X.shape[1]

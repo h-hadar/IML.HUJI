@@ -2,7 +2,6 @@ from typing import NoReturn
 
 import numpy as np
 
-from .. import MultivariateGaussian
 from ...base import BaseEstimator
 from ...metrics import loss_functions
 
@@ -47,11 +46,14 @@ class GaussianNaiveBayes(BaseEstimator):
 		"""
 		self.classes_, class_sample_count = np.unique(y, return_counts=True)
 		m = X.shape[0]
+		if len(X.shape) == 1:
+			X = X.reshape(-1, 1)
 		self.pi_ = class_sample_count / m
 		self.mu_ = [np.sum(X[y == k, :], axis=0) / class_sample_count[i]
 					for i, k in enumerate(self.classes_)]
 		self.vars_ = [np.sum(((X - self.mu_[i])[y == k, :]) ** 2, axis=0) / class_sample_count[i]
 					  for i, k in enumerate(self.classes_)]
+		self.vars_ = np.array(self.vars_)
 	
 	def _predict(self, X: np.ndarray) -> np.ndarray:
 		"""
@@ -105,12 +107,12 @@ class GaussianNaiveBayes(BaseEstimator):
 	@staticmethod
 	def likelihood_helper(mu, cov, X):
 		return np.apply_along_axis(lambda x: GaussianNaiveBayes._pdf(mu, cov, x), axis=1, arr=X)
-		
+	
 	@staticmethod
 	def _pdf(mu, cov, sample) -> float:
 		d = len(sample)
 		coeff = 1 / np.sqrt((2 * np.pi) ** d * np.linalg.det(cov))
-		power = -0.5 * np.linalg.multi_dot(((sample - mu), np.linalg.inv(cov),(sample - mu)))
+		power = -0.5 * np.linalg.multi_dot(((sample - mu), np.linalg.inv(cov), (sample - mu)))
 		return coeff * np.exp(power)
 	
 	def _loss(self, X: np.ndarray, y: np.ndarray) -> float:

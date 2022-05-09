@@ -129,7 +129,7 @@ class Perceptron(BaseEstimator):
         Returns
         -------
         loss : float
-            Performance under missclassification loss function
+            Performance under misclassification loss function
         """
         y_pred = self.predict(X)
         return loss_functions.misclassification_error(y_true=y, y_pred=y_pred)
