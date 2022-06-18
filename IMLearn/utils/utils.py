@@ -32,8 +32,8 @@ def split_train_test(X: pd.DataFrame, y: pd.Series, train_proportion) -> Tuple[
     test_y : Series of shape (floor((1-train_proportion) * n_samples), )
         Responses of test samples
     """
-	X = X.reset_index(drop=True)
-	y = y.reset_index(drop=True)
+	# X = X.reset_index(drop=True)
+	# y = y.reset_index(drop=True)
 	train_x = X.sample(frac=train_proportion)
 	train_y = y.iloc[train_x.index]
 	test_indices = list(set(X.index) - set(train_x.index))

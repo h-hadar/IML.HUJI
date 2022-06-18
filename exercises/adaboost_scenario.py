@@ -96,16 +96,15 @@ def fit_and_evaluate_adaboost(noise, n_learners=250, train_size=5000, test_size=
     fig.show()
     #
     # # Question 4: Decision surface with weighted samples
-    sizes = ada_boost.D_ / max(ada_boost.D_) * 12
-    symbols = ['x', 'square']
+    sizes = ada_boost.D_ / max(ada_boost.D_) * 8
     fig = go.Figure()
     fig.add_traces([decision_surface(ada_boost.predict, lims[0], lims[1], showscale=False),
                     go.Scatter(x=train_X[:, 0], y=train_X[:, 1],
                                mode="markers", showlegend=False,
                                marker=dict(color=train_y,
-                                           colorscale=['darkmagenta', 'darkblue'],
+                                           colorscale=[custom[0], custom[-1]],
                                            size=sizes,
-                                           line=dict(color="black", width=.2))),
+                                           line=dict(color="black", width=.5))),
                     ])
     fig.update_layout(title=f'Final Decision Boundary, with training data point size depicting its weight in the '
                             f'distribution (noise={noise})').show()
@@ -115,4 +114,3 @@ if __name__ == '__main__':
     np.random.seed(0)
     fit_and_evaluate_adaboost(0)
     fit_and_evaluate_adaboost(0.4)
-    # raise NotImplementedError()

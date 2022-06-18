@@ -84,7 +84,7 @@ class DecisionStump(BaseEstimator):
         return np.where(X[:, self.j_] >= self.threshold_, self.sign_, -self.sign_)
     
     @staticmethod
-    def _find_threshold(values: np.ndarray, true_labels: np.ndarray, sign: int) -> Tuple[float, float]:
+    def _find_threshold(values: np.ndarray, weighted_true_labels: np.ndarray, sign: int) -> Tuple[float, float]:
         """
         Given a feature vector and labels, find a threshold by which to perform a split
         The threshold is found according to the value minimizing the misclassification
@@ -95,7 +95,7 @@ class DecisionStump(BaseEstimator):
         values: ndarray of shape (n_samples,)
             A feature vector to find a splitting threshold for
 
-        true_labels: ndarray of shape (n_samples,)
+        weighted_true_labels: ndarray of shape (n_samples,)
             The labels to compare against
 
         sign: int
@@ -119,10 +119,14 @@ class DecisionStump(BaseEstimator):
         for current_val in values:
             # create a label vec with 1's (or -1's) where feature values > current value
             possible_labels = np.where(values >= current_val, sign, -sign)
-            possible_loss = misclassification_error(possible_labels, true_labels)
+            possible_loss = DecisionStump.weighted_error(weighted_true_labels, possible_labels)
             if possible_loss < best_loss:
                 best_loss, threshold = possible_loss, current_val
         return threshold, best_loss
+    
+    @staticmethod
+    def weighted_error(weighted_true_labels, predictions):
+        return np.sum(abs(weighted_true_labels)[weighted_true_labels * predictions < 0])
     
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
@@ -141,4 +145,4 @@ class DecisionStump(BaseEstimator):
         loss : float
             Performance under misclassification loss function
         """
-        return misclassification_error(self.predict(X), y)
+        return misclassification_error(y, self.predict(X))

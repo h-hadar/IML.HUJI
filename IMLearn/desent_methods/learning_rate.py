@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 from IMLearn.base import BaseModule, BaseLearningRate
 
@@ -26,5 +28,5 @@ class ExponentialLR(FixedLR):
         super().__init__(base_lr)
         self.decay_rate = decay_rate
 
-    def lr_step(self, iter, **lr_kwargs) -> float:
-        raise NotImplementedError()
+    def lr_step(self, iter_i, **lr_kwargs) -> float:
+        return self.base_lr * math.pow(self.decay_rate, iter_i)

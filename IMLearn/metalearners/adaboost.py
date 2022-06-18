@@ -3,6 +3,7 @@ from typing import Callable, NoReturn
 import numpy as np
 
 from ..base import BaseEstimator
+from ..learners.classifiers import DecisionStump
 from ..metrics import misclassification_error
 
 
@@ -58,15 +59,12 @@ class AdaBoost(BaseEstimator):
         m = X.shape[0]
         self.D_ = [1 / m] * m
         for t in range(self.iterations_):
-            # sample m rows and labels with distribution D
-            sample_indices = np.random.choice(m, size=m, p=self.D_)
-            samples = X[sample_indices, :]
-            labels = y[sample_indices]
             # fit a weak learner on the sampled data
             clf = self.wl_()
-            clf.fit(samples, labels)
+            weighted_labels = y * self.D_
+            clf.fit(X, weighted_labels)
             self.models_[t] = clf
-            error = clf.loss(samples, labels)  # loss on distribution D
+            error = DecisionStump.weighted_error(weighted_labels, clf.predict(X))  # loss on distribution D
             # calculate the weight of this learner
             alpha = .5 * np.log((1 - error) / error)
             self.weights_[t] = alpha
