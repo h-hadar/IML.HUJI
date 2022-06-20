@@ -1,11 +1,15 @@
 from __future__ import annotations
+
+import math
 from typing import Callable, NoReturn
 import numpy as np
 
 from IMLearn.base import BaseModule, BaseLR
 from .learning_rate import FixedLR
+from .modules import L2
 
-OUTPUT_VECTOR_TYPE = ["last", "best", "average"]
+OUTPUT_VECTOR_TYPE = {"last", "best", "average"}
+
 
 
 def default_callback(**kwargs) -> NoReturn:
@@ -75,6 +79,14 @@ class GradientDescent:
         self.tol_ = tol
         self.max_iter_ = max_iter
         self.callback_ = callback
+        
+    def __update(self, prev: tuple, current: tuple, iter_index: int):
+        if self.out_type_ == "average":
+            return (iter_index * prev[0] + current[0]) / (iter_index + 1), current[1]
+        if self.out_type_ == "best":
+            return prev if prev[1] < current[1] else current
+        if self.out_type_ == "last":
+            return current
 
     def fit(self, f: BaseModule, X: np.ndarray, y: np.ndarray):
         """
@@ -119,4 +131,17 @@ class GradientDescent:
                 Euclidean norm of w^(t)-w^(t-1)
 
         """
-        raise NotImplementedError()
+        cur_result = (f.weights, f.compute_output())
+        for t in range(self.max_iter_):
+            gradient = f.compute_jacobian()
+            step = self.learning_rate_.lr_step(t=t)
+            prev_w = cur_result[0]
+            new_w = prev_w - step * gradient
+            delta = math.sqrt(L2(prev_w - new_w).compute_output())
+            self.callback_(solver=self, delta=delta, grad=gradient,
+                           val=cur_result[1], t=t, eta=step, weights=prev_w)
+            f.weights = new_w
+            cur_result = self.__update(cur_result, (new_w, f.compute_output()), t)
+            if delta < self.tol_:
+                break
+        return cur_result[0]

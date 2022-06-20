@@ -1,14 +1,17 @@
-import numpy as np
-import pandas as pd
+import math
 from typing import Tuple, List, Callable, Type
 
+import numpy as np
+import pandas as pd
+import plotly.graph_objects as go
+import plotly.io as pio
+
 from IMLearn import BaseModule
-from IMLearn.desent_methods import GradientDescent, FixedLR, ExponentialLR
+from IMLearn.desent_methods import FixedLR, GradientDescent, ExponentialLR
 from IMLearn.desent_methods.modules import L1, L2
-from IMLearn.learners.classifiers.logistic_regression import LogisticRegression
 from IMLearn.utils import split_train_test
 
-import plotly.graph_objects as go
+pio.templates.default = "plotly_white"
 
 
 def plot_descent_path(module: Type[BaseModule],
@@ -46,12 +49,14 @@ def plot_descent_path(module: Type[BaseModule],
     fig = plot_descent_path(IMLearn.desent_methods.modules.L1, np.ndarray([[1,1],[0,0]]))
     fig.show()
     """
+    
     def predict_(w):
         return np.array([module(weights=wi).compute_output() for wi in w])
-
+    
     from utils import decision_surface
     return go.Figure([decision_surface(predict_, xrange=xrange, yrange=yrange, density=70, showscale=False),
-                      go.Scatter(x=descent_path[:, 0], y=descent_path[:, 1], mode="markers+lines", marker_color="black")],
+                      go.Scatter(x=descent_path[:, 0], y=descent_path[:, 1], mode="markers+lines",
+                                 marker_color="black")],
                      layout=go.Layout(xaxis=dict(range=xrange),
                                       yaxis=dict(range=yrange),
                                       title=f"GD Descent Path {title}"))
@@ -73,25 +78,72 @@ def get_gd_state_recorder_callback() -> Tuple[Callable[[], None], List[np.ndarra
     weights: List[np.ndarray]
         Recorded parameters
     """
-    raise NotImplementedError()
+    values = []
+    weights = []
+    
+    def my_callback(**kwargs):
+        values.append(kwargs['val'])
+        weights.append(kwargs['weights'])
+    
+    return my_callback, values, weights
 
 
 def compare_fixed_learning_rates(init: np.ndarray = np.array([np.sqrt(2), np.e / 3]),
                                  etas: Tuple[float] = (1, .1, .01, .001)):
-    raise NotImplementedError()
+    for objective in [L1, L2]:
+        convergence_fig = go.Figure()
+        min_loss = np.inf
+        for step_size in etas:
+            lr = FixedLR(step_size)
+            f = objective(init)
+            callback, values, weights = get_gd_state_recorder_callback()
+            gd = GradientDescent(learning_rate=lr, callback=callback)
+            solution = gd.fit(f, None, None)
+            min_loss = min(min_loss, np.min(values))
+            descent_path = np.r_[weights]
+            fig = plot_descent_path(module=objective, descent_path=descent_path,
+                                    title=f" - Objective: {objective.__name__}, Learning Rate: {step_size}")
+            fig.write_image(f"ex6/q1/{objective.__name__}-{step_size}.png", width=1500, height=900)
+            convergence_fig.add_trace(go.Scatter(x=np.arange(1, 1001), y=values, mode='lines',
+                                                 name=f"eta={step_size}"))
+        print(f"Minimal loss on objective {objective.__name__} using fixed LR: {min_loss:.4f}")
+        convergence_fig.update_layout(title=f"{objective.__name__} - convergence rate",
+                                      xaxis_title="iteration", yaxis_title="norm"
+                                      ).write_image(f"ex6/q3/{objective.__name__}-convergence.png",
+                                                    width=1500, height=900)
 
 
 def compare_exponential_decay_rates(init: np.ndarray = np.array([np.sqrt(2), np.e / 3]),
                                     eta: float = .1,
                                     gammas: Tuple[float] = (.9, .95, .99, 1)):
     # Optimize the L1 objective using different decay-rate values of the exponentially decaying learning rate
-    raise NotImplementedError()
-
+    gamma_dict = dict()
+    min_loss = math.inf
+    for gamma in gammas:
+        callback, values, weights = get_gd_state_recorder_callback()
+        lr = ExponentialLR(base_lr=eta, decay_rate=gamma)
+        f = L1(init)
+        gd = GradientDescent(learning_rate=lr, callback=callback)
+        gd.fit(f, None, None)
+        gamma_dict[gamma] = (values, weights)
+        print(f"Minimal loss on objective L1 using exponential LR, gamma={gamma}: {np.min(values):.4f}")
+        
     # Plot algorithm's convergence for the different values of gamma
-    raise NotImplementedError()
-
+    convergence_fig = go.Figure()
+    for gamma in gamma_dict:
+        convergence_fig.add_trace(go.Scatter(x=np.arange(1, 1001), y=gamma_dict[gamma][0], mode='lines',
+                                             line=dict(width=0.6),
+                                             name=f"gamma={gamma}"))
+    convergence_fig.update_layout(title="L1 - convergence rate with exponential decaying step size",
+                                  xaxis_title="iteration", yaxis_title="norm"
+                                  ).write_image("ex6/q5/L1-convergence.png",
+                                                width=1500, height=900)
+    
     # Plot descent path for gamma=0.95
-    raise NotImplementedError()
+    fig = plot_descent_path(module=L1, descent_path=np.r_[gamma_dict[0.95][1]],
+                            title=f" - Objective: L1, Exponential Decaying Learning Rate: eta={eta}, gamma={0.95}")
+    fig.write_image(f"ex6/q7/L1-{0.95}.png", width=1500, height=900)
+    
 
 
 def load_data(path: str = "../datasets/SAheart.data", train_portion: float = .8) -> \
@@ -129,10 +181,10 @@ def load_data(path: str = "../datasets/SAheart.data", train_portion: float = .8)
 def fit_logistic_regression():
     # Load and split SA Heard Disease dataset
     X_train, y_train, X_test, y_test = load_data()
-
+    
     # Plotting convergence rate of logistic regression over SA heart disease data
     raise NotImplementedError()
-
+    
     # Fitting l1- and l2-regularized logistic regression models, using cross-validation to specify values
     # of regularization parameter
     raise NotImplementedError()
@@ -142,4 +194,4 @@ if __name__ == '__main__':
     np.random.seed(0)
     compare_fixed_learning_rates()
     compare_exponential_decay_rates()
-    fit_logistic_regression()
+    # fit_logistic_regression()
