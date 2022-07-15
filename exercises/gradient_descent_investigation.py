@@ -5,10 +5,14 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.io as pio
+from sklearn.metrics import roc_curve, auc
 
 from IMLearn import BaseModule
 from IMLearn.desent_methods import FixedLR, GradientDescent, ExponentialLR
 from IMLearn.desent_methods.modules import L1, L2
+from IMLearn.learners.classifiers import LogisticRegression
+from IMLearn.metrics import misclassification_error
+from IMLearn.model_selection import cross_validate
 from IMLearn.utils import split_train_test
 
 pio.templates.default = "plotly_white"
@@ -103,14 +107,14 @@ def compare_fixed_learning_rates(init: np.ndarray = np.array([np.sqrt(2), np.e /
             descent_path = np.r_[weights]
             fig = plot_descent_path(module=objective, descent_path=descent_path,
                                     title=f" - Objective: {objective.__name__}, Learning Rate: {step_size}")
-            fig.write_image(f"ex6/q1/{objective.__name__}-{step_size}.png", width=1500, height=900)
+            fig.write_image(f"ex6/q1/{objective.__name__}-{step_size}.png", width=1300, height=800)
             convergence_fig.add_trace(go.Scatter(x=np.arange(1, 1001), y=values, mode='lines',
                                                  name=f"eta={step_size}"))
         print(f"Minimal loss on objective {objective.__name__} using fixed LR: {min_loss:.4f}")
         convergence_fig.update_layout(title=f"{objective.__name__} - convergence rate",
                                       xaxis_title="iteration", yaxis_title="norm"
                                       ).write_image(f"ex6/q3/{objective.__name__}-convergence.png",
-                                                    width=1500, height=900)
+                                                    width=1300, height=800)
 
 
 def compare_exponential_decay_rates(init: np.ndarray = np.array([np.sqrt(2), np.e / 3]),
@@ -127,7 +131,7 @@ def compare_exponential_decay_rates(init: np.ndarray = np.array([np.sqrt(2), np.
         gd.fit(f, None, None)
         gamma_dict[gamma] = (values, weights)
         print(f"Minimal loss on objective L1 using exponential LR, gamma={gamma}: {np.min(values):.4f}")
-        
+    
     # Plot algorithm's convergence for the different values of gamma
     convergence_fig = go.Figure()
     for gamma in gamma_dict:
@@ -137,13 +141,12 @@ def compare_exponential_decay_rates(init: np.ndarray = np.array([np.sqrt(2), np.
     convergence_fig.update_layout(title="L1 - convergence rate with exponential decaying step size",
                                   xaxis_title="iteration", yaxis_title="norm"
                                   ).write_image("ex6/q5/L1-convergence.png",
-                                                width=1500, height=900)
+                                                width=1300, height=800)
     
     # Plot descent path for gamma=0.95
     fig = plot_descent_path(module=L1, descent_path=np.r_[gamma_dict[0.95][1]],
                             title=f" - Objective: L1, Exponential Decaying Learning Rate: eta={eta}, gamma={0.95}")
-    fig.write_image(f"ex6/q7/L1-{0.95}.png", width=1500, height=900)
-    
+    fig.write_image(f"ex6/q7/L1-{0.95}.png", width=1300, height=800)
 
 
 def load_data(path: str = "../datasets/SAheart.data", train_portion: float = .8) -> \
@@ -179,19 +182,68 @@ def load_data(path: str = "../datasets/SAheart.data", train_portion: float = .8)
 
 
 def fit_logistic_regression():
-    # Load and split SA Heard Disease dataset
+    # Load and split SA Heart Disease dataset
     X_train, y_train, X_test, y_test = load_data()
-    
+    solver = GradientDescent(max_iter=20000, learning_rate=FixedLR(1e-4))
     # Plotting convergence rate of logistic regression over SA heart disease data
-    raise NotImplementedError()
+    logistic = LogisticRegression(
+        solver=solver
+    )
+    logistic.fit(X=X_train.to_numpy(), y=y_train.to_numpy())
+    probs = logistic.predict_proba(X=X_train.to_numpy())
+    fpr, tpr, thresholds = roc_curve(y_true=y_train, y_score=probs)
+    roc_fig = go.Figure()
+    roc_fig.add_traces([go.Scatter(x=fpr, y=tpr,
+                                   mode='lines+markers', name='Logistic', text=thresholds,
+                                   ),
+                        go.Scatter(x=np.linspace(0, 1, 100),
+                                   y=np.linspace(0, 1, 100),
+                                   mode='lines', line=dict(color="black", dash='dash'),
+                                   name='No skill')
+                        ])
+    roc_fig.layout = go.Layout(title=rf"$\text{{ROC Curve Of Fitted Model - AUC}}={auc(fpr, tpr):.6f}$",
+                               xaxis=dict(title=r"$\text{False Positive Rate (FPR)}$"),
+                               yaxis=dict(title=r"$\text{True Positive Rate (TPR)}$"))
+    roc_fig.write_image("ex6/q8-ROC.png", width=1300, height=800)
+    roc_fig.show()
+    # Q9
+    best_alpha = thresholds[np.argmax(tpr - fpr)]
+    pred_probs = logistic.predict_proba(X=X_test.to_numpy())
+    pred_labels = np.where(pred_probs >= best_alpha, 1, 0)
+    print(f"Q9 -- best threshold-alpha*: {best_alpha}")
+    model = LogisticRegression(
+        solver=solver, alpha=best_alpha
+    )
+    model.fit(X=X_train.to_numpy(), y=y_train.to_numpy())
+    # error = misclassification_error(y_test.to_numpy(), pred_labels)
+    error = model.loss(X_test.to_numpy(), y_test.to_numpy())
+    print(f"Test error for best threshold: "
+          f"{error}")
     
     # Fitting l1- and l2-regularized logistic regression models, using cross-validation to specify values
     # of regularization parameter
-    raise NotImplementedError()
+    for penalty_type in ["l1", "l2"]:
+        best_gamma, best_validation = None, np.inf
+        for gamma in {0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1}:
+            # print(f"calculating gamma={gamma}")
+            logistic_regularized = LogisticRegression(
+                penalty=penalty_type, solver=solver, lam=gamma
+            )
+            t_score, v_score = \
+                cross_validate(estimator=logistic_regularized, X=X_train.to_numpy(), y=y_train.to_numpy(),
+                               scoring=misclassification_error, cv=5)
+            if v_score < best_validation:
+                best_gamma, best_validation = gamma, v_score
+        test_error = LogisticRegression(
+            penalty=penalty_type, solver=solver, lam=best_gamma
+        ).fit(X=X_train.to_numpy(), y=y_train.to_numpy()).loss(X=X_test.to_numpy(), y=y_test.to_numpy())
+        print(f"Q10 - {penalty_type}: "
+              f"best regularization = {best_gamma} , "
+              f"test error: {test_error}")
 
 
 if __name__ == '__main__':
     np.random.seed(0)
     compare_fixed_learning_rates()
     compare_exponential_decay_rates()
-    # fit_logistic_regression()
+    fit_logistic_regression()

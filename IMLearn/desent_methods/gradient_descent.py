@@ -131,17 +131,17 @@ class GradientDescent:
                 Euclidean norm of w^(t)-w^(t-1)
 
         """
-        cur_result = (f.weights, f.compute_output())
+        cur_result = (f.weights, f.compute_output(X=X, y=y))
         for t in range(self.max_iter_):
-            gradient = f.compute_jacobian()
+            gradient = f.compute_jacobian(X=X, y=y)
             step = self.learning_rate_.lr_step(t=t)
             prev_w = cur_result[0]
             new_w = prev_w - step * gradient
-            delta = math.sqrt(L2(prev_w - new_w).compute_output())
+            delta = math.sqrt(L2(prev_w - new_w).compute_output(X=X, y=y))
             self.callback_(solver=self, delta=delta, grad=gradient,
                            val=cur_result[1], t=t, eta=step, weights=prev_w)
             f.weights = new_w
-            cur_result = self.__update(cur_result, (new_w, f.compute_output()), t)
+            cur_result = self.__update(cur_result, (new_w, f.compute_output(X=X, y=y)), t)
             if delta < self.tol_:
                 break
         return cur_result[0]

@@ -13,7 +13,7 @@ class BaseModule(ABC):
         Parameters of function with respect to which the function is optimized.
     """
 
-    def __init__(self, weights: np.ndarray = None) -> BaseModule:
+    def __init__(self, weights: np.ndarray = None):
         """
         Initialize a module instance
 
